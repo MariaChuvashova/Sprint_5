@@ -1,114 +1,134 @@
+# tests/test_login.py
 import pytest
-import time
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from pages.main_page import MainPage
 from pages.login_page import LoginPage
 from utils.data_generator import get_student_credentials
+from data.urls import Urls
 
 class TestLogin:
     def test_login_via_main_page_button(self, driver):
         """Вход через кнопку 'Войти в аккаунт' на главной"""
-        driver.get("https://stellarburgers.nomoreparties.site")
-        time.sleep(3)  # Увеличили паузу
+        driver.get(Urls.BASE_URL)
         
         main_page = MainPage(driver)
-        print("Нажимаем 'Войти в аккаунт' на главной")
         main_page.click_login_button()
-        time.sleep(3)
         
         login_page = LoginPage(driver)
         
         email, password = get_student_credentials()
-        print(f"Вводим данные: {email}")
         
+        # Вводим данные медленнее, как реальный пользователь
         login_page.input_email(email)
-        time.sleep(1)
         login_page.input_password(password)
-        time.sleep(1)
-        print("Нажимаем 'Войти'")
         login_page.click_login_button()
-        time.sleep(5)
         
-        print(f"Успешный вход! URL: {driver.current_url}")
-        assert driver.current_url == "https://stellarburgers.nomoreparties.site/"
-        print("✓ Вход через главную кнопку успешен!")
-        time.sleep(2)
+        # Ждем либо редиректа на главную, либо появления ошибки
+        try:
+            # Вариант 1: Ждем редирект на главную
+            WebDriverWait(driver, 10).until(
+                EC.url_to_be(Urls.BASE_URL + "/")
+            )
+            assert driver.current_url == Urls.BASE_URL + "/"
+        except:
+            # Вариант 2: Если редиректа нет, проверяем ошибку
+            try:
+                error_element = WebDriverWait(driver, 5).until(
+                    EC.visibility_of_element_located((By.XPATH, "//p[contains(@class, 'input__error')]"))
+                )
+                pytest.fail(f"Ошибка при входе: {error_element.text}")
+            except:
+                # Вариант 3: Если нет ошибки, делаем скриншот для диагностики
+                driver.save_screenshot("login_error.png")
+                pytest.fail("Вход не удался, но ошибка не обнаружена. Смотрите screenshot: login_error.png")
 
     def test_login_via_personal_account_button(self, driver):
         """Вход через кнопку 'Личный кабинет' в header"""
-        driver.get("https://stellarburgers.nomoreparties.site")
-        time.sleep(3)
+        driver.get(Urls.BASE_URL)
         
         main_page = MainPage(driver)
-        print("Нажимаем 'Личный кабинет' в header")
         main_page.click_personal_account()
-        time.sleep(3)
         
         login_page = LoginPage(driver)
         
         email, password = get_student_credentials()
-        print(f"Вводим данные: {email}")
         
         login_page.input_email(email)
-        time.sleep(1)
         login_page.input_password(password)
-        time.sleep(1)
-        print("Нажимаем 'Войти'")
         login_page.click_login_button()
-        time.sleep(5)
         
-        print(f"Успешный вход! URL: {driver.current_url}")
-        assert driver.current_url == "https://stellarburgers.nomoreparties.site/"
-        print("✓ Вход через личный кабинет успешен!")
-        time.sleep(2)
+        # Ждем либо редиректа на главную, либо появления ошибки
+        try:
+            WebDriverWait(driver, 10).until(
+                EC.url_to_be(Urls.BASE_URL + "/")
+            )
+            assert driver.current_url == Urls.BASE_URL + "/"
+        except:
+            try:
+                error_element = WebDriverWait(driver, 5).until(
+                    EC.visibility_of_element_located((By.XPATH, "//p[contains(@class, 'input__error')]"))
+                )
+                pytest.fail(f"Ошибка при входе: {error_element.text}")
+            except:
+                driver.save_screenshot("login_error.png")
+                pytest.fail("Вход не удался, но ошибка не обнаружена. Смотрите screenshot: login_error.png")
 
     def test_login_via_registration_form(self, driver):
         """Вход через кнопку 'Войти' в форме регистрации"""
-        driver.get("https://stellarburgers.nomoreparties.site/register")
-        time.sleep(3)
+        driver.get(Urls.REGISTER_URL)
         
         login_page = LoginPage(driver)
-        print("Нажимаем 'Войти' на странице регистрации")
         login_page.click_login_link()
-        time.sleep(3)
         
         email, password = get_student_credentials()
-        print(f"Вводим данные: {email}")
         
         login_page.input_email(email)
-        time.sleep(1)
         login_page.input_password(password)
-        time.sleep(1)
-        print("Нажимаем 'Войти'")
         login_page.click_login_button()
-        time.sleep(5)
         
-        print(f"Успешный вход! URL: {driver.current_url}")
-        assert driver.current_url == "https://stellarburgers.nomoreparties.site/"
-        print("✓ Вход из формы регистрации успешен!")
-        time.sleep(2)
+        # Ждем либо редиректа на главную, либо появления ошибки
+        try:
+            WebDriverWait(driver, 10).until(
+                EC.url_to_be(Urls.BASE_URL + "/")
+            )
+            assert driver.current_url == Urls.BASE_URL + "/"
+        except:
+            try:
+                error_element = WebDriverWait(driver, 5).until(
+                    EC.visibility_of_element_located((By.XPATH, "//p[contains(@class, 'input__error')]"))
+                )
+                pytest.fail(f"Ошибка при входе: {error_element.text}")
+            except:
+                driver.save_screenshot("login_error.png")
+                pytest.fail("Вход не удался, но ошибка не обнаружена. Смотрите screenshot: login_error.png")
 
     def test_login_via_password_recovery(self, driver):
         """Вход через кнопку 'Войти' в форме восстановления пароля"""
-        driver.get("https://stellarburgers.nomoreparties.site/forgot-password")
-        time.sleep(3)
+        driver.get(Urls.FORGOT_PASSWORD_URL)
         
         login_page = LoginPage(driver)
-        print("Нажимаем 'Войти' на странице восстановления")
         login_page.click_login_link()
-        time.sleep(3)
         
         email, password = get_student_credentials()
-        print(f"Вводим данные: {email}")
         
         login_page.input_email(email)
-        time.sleep(1)
         login_page.input_password(password)
-        time.sleep(1)
-        print("Нажимаем 'Войти'")
         login_page.click_login_button()
-        time.sleep(5)
         
-        print(f"Успешный вход! URL: {driver.current_url}")
-        assert driver.current_url == "https://stellarburgers.nomoreparties.site/"
-        print("✓ Вход из формы восстановления успешен!")
-        time.sleep(2)
+        # Ждем либо редиректа на главную, либо появления ошибки
+        try:
+            WebDriverWait(driver, 10).until(
+                EC.url_to_be(Urls.BASE_URL + "/")
+            )
+            assert driver.current_url == Urls.BASE_URL + "/"
+        except:
+            try:
+                error_element = WebDriverWait(driver, 5).until(
+                    EC.visibility_of_element_located((By.XPATH, "//p[contains(@class, 'input__error')]"))
+                )
+                pytest.fail(f"Ошибка при входе: {error_element.text}")
+            except:
+                driver.save_screenshot("login_error.png")
+                pytest.fail("Вход не удался, но ошибка не обнаружена. Смотрите screenshot: login_error.png")
