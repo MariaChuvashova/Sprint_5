@@ -1,97 +1,98 @@
-# tests/test_navigation.py
-import pytest
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from pages.main_page import MainPage
-from pages.login_page import LoginPage
-from pages.profile_page import ProfilePage
-from utils.data_generator import get_student_credentials
-from data.urls import Urls  # Добавляем импорт
+from selenium.webdriver.support.ui import WebDriverWait
+from locators import Locators
+from data import TestData
+
 
 class TestNavigation:
-    def test_navigate_to_personal_account(self, driver):
-        """Переход в личный кабинет"""
-        driver.get(Urls.BASE_URL)
+    def test_navigate_to_personal_account(self, browser):
+        """Переход в личный кабинет без авторизации"""
+        browser.find_element(*Locators.PERSONAL_ACCOUNT_BUTTON).click()
         
-        main_page = MainPage(driver)
-        main_page.click_personal_account()
-        
-        # Ждем перехода на страницу логина
-        WebDriverWait(driver, 10).until(
-            EC.url_contains("/login")
+        WebDriverWait(browser, 10).until(
+            EC.visibility_of_element_located(Locators.LOGIN_SUBMIT_BUTTON)
         )
-        assert "login" in driver.current_url
+        assert browser.find_element(*Locators.LOGIN_SUBMIT_BUTTON).is_displayed()
 
-    def test_navigate_from_profile_to_constructor_via_button(self, driver):
-        """Переход из профиля в конструктор через кнопку 'Конструктор'"""
-        # Сначала логинимся
-        driver.get(Urls.BASE_URL)
-        
-        main_page = MainPage(driver)
-        main_page.click_login_button()
-        
-        login_page = LoginPage(driver)
-        email, password = get_student_credentials()
-        
-        login_page.input_email(email)
-        login_page.input_password(password)
-        login_page.click_login_button()
-        
-        # Ждем редиректа на главную страницу после входа
-        WebDriverWait(driver, 10).until(
-            EC.url_to_be(Urls.BASE_URL + "/")
-        )
+    def test_navigate_from_profile_to_constructor_via_button(self, browser):
+        """Возврат из профиля в конструктор через кнопку 'Конструктор'"""
+        # Логинимся
+        browser.find_element(*Locators.LOGIN_BUTTON).click()
+        browser.find_element(*Locators.EMAIL_FIELD).send_keys(TestData.VALID_EMAIL)
+        browser.find_element(*Locators.PASSWORD_FIELD).send_keys(TestData.VALID_PASSWORD)
+        browser.find_element(*Locators.LOGIN_SUBMIT_BUTTON).click()
         
         # Переходим в профиль
-        main_page.click_personal_account()
-        
-        # Ждем перехода в профиль
-        WebDriverWait(driver, 10).until(
-            EC.url_contains("/account/profile")
+        WebDriverWait(browser, 10).until(
+            EC.visibility_of_element_located(Locators.PERSONAL_ACCOUNT_BUTTON)
         )
+        browser.find_element(*Locators.PERSONAL_ACCOUNT_BUTTON).click()
         
-        # Возвращаемся в конструктор через кнопку
-        main_page.click_constructor()
-        
-        # Ждем возврата на главную страницу
-        WebDriverWait(driver, 10).until(
-            EC.url_to_be(Urls.BASE_URL + "/")
+        # Возвращаемся в конструктор
+        WebDriverWait(browser, 10).until(
+            EC.element_to_be_clickable(Locators.CONSTRUCTOR_BUTTON)
         )
-        assert driver.current_url == Urls.BASE_URL + "/"
+        browser.find_element(*Locators.CONSTRUCTOR_BUTTON).click()
+        
+        # Проверяем что вернулись
+        WebDriverWait(browser, 10).until(
+            EC.visibility_of_element_located(Locators.ORDER_BUTTON)
+        )
+        assert browser.find_element(*Locators.ORDER_BUTTON).is_displayed()
 
-    def test_navigate_from_profile_to_constructor_via_logo(self, driver):
-        """Переход из профиля в конструктор через логотип"""
-        # Сначала логинимся
-        driver.get(Urls.BASE_URL)
-        
-        main_page = MainPage(driver)
-        main_page.click_login_button()
-        
-        login_page = LoginPage(driver)
-        email, password = get_student_credentials()
-        
-        login_page.input_email(email)
-        login_page.input_password(password)
-        login_page.click_login_button()
-        
-        # Ждем редиректа на главную страницу после входа
-        WebDriverWait(driver, 10).until(
-            EC.url_to_be(Urls.BASE_URL + "/")
-        )
+    def test_navigate_from_profile_to_constructor_via_logo(self, browser):
+        """Возврат из профиля в конструктор через логотип"""
+        # Логинимся
+        browser.find_element(*Locators.LOGIN_BUTTON).click()
+        browser.find_element(*Locators.EMAIL_FIELD).send_keys(TestData.VALID_EMAIL)
+        browser.find_element(*Locators.PASSWORD_FIELD).send_keys(TestData.VALID_PASSWORD)
+        browser.find_element(*Locators.LOGIN_SUBMIT_BUTTON).click()
         
         # Переходим в профиль
-        main_page.click_personal_account()
+        WebDriverWait(browser, 10).until(
+            EC.visibility_of_element_located(Locators.PERSONAL_ACCOUNT_BUTTON)
+        )
+        browser.find_element(*Locators.PERSONAL_ACCOUNT_BUTTON).click()
         
-        # Ждем перехода в профиль
-        WebDriverWait(driver, 10).until(
-            EC.url_contains("/account/profile")
+        # Возвращаемся через логотип
+        WebDriverWait(browser, 10).until(
+            EC.element_to_be_clickable(Locators.LOGO_BUTTON)
+        )
+        browser.find_element(*Locators.LOGO_BUTTON).click()
+        
+        # Проверяем что вернулись
+        WebDriverWait(browser, 10).until(
+            EC.visibility_of_element_located(Locators.ORDER_BUTTON)
+        )
+        assert browser.find_element(*Locators.ORDER_BUTTON).is_displayed()
+
+    def test_navigation_workflow(self, browser):
+        """Полный цикл навигации"""
+        # Главная → Личный кабинет (логин)
+        browser.find_element(*Locators.PERSONAL_ACCOUNT_BUTTON).click()
+        WebDriverWait(browser, 10).until(
+            EC.visibility_of_element_located(Locators.LOGIN_SUBMIT_BUTTON)
         )
         
-        # Возвращаемся в конструктор через логотип
-        main_page.click_logo()
+        # Логинимся и возвращаемся на главную
+        browser.find_element(*Locators.EMAIL_FIELD).send_keys(TestData.VALID_EMAIL)
+        browser.find_element(*Locators.PASSWORD_FIELD).send_keys(TestData.VALID_PASSWORD)
+        browser.find_element(*Locators.LOGIN_SUBMIT_BUTTON).click()
         
-        # Ждем возврата на главную страницу
-        WebDriverWait(driver, 10).until(
-            EC.url_to_be(Urls.BASE_URL + "/")
+        # Главная → Профиль
+        WebDriverWait(browser, 10).until(
+            EC.visibility_of_element_located(Locators.PERSONAL_ACCOUNT_BUTTON)
         )
-        assert driver.current_url == Urls.BASE_URL + "/"
+        browser.find_element(*Locators.PERSONAL_ACCOUNT_BUTTON).click()
+        
+        # Профиль → Конструктор
+        WebDriverWait(browser, 10).until(
+            EC.element_to_be_clickable(Locators.CONSTRUCTOR_BUTTON)
+        )
+        browser.find_element(*Locators.CONSTRUCTOR_BUTTON).click()
+        
+        # Проверяем успешное завершение
+        WebDriverWait(browser, 10).until(
+            EC.visibility_of_element_located(Locators.ORDER_BUTTON)
+        )
+        assert browser.find_element(*Locators.ORDER_BUTTON).is_displayed()
